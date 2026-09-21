@@ -1,5 +1,4 @@
-import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { UserController } from './user/user.controller.js';
@@ -8,23 +7,35 @@ import { ProductController } from './product/product.controller.js';
 import { EmployeeModule } from './employee/employee.module.js';
 import { CategoryModule } from './category/category.module.js';
 import { StudentModule } from './student/student.module.js';
-
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
+import { ExceptionController } from './exception/exception.controller.js';
+import { LoggerMiddleware } from './middleware/logger/logger.middleware.js';
+import { DatabaseService } from './database/database.service.js';
+import { DatabaseController } from './database/database.controller.js';
+import { ConfigModule } from '@nestjs/config';
+import { EvService } from './ev/ev.service.js';
+import { EvController } from './ev/ev.controller.js';
 
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'nest-home',
-    }),
     EmployeeModule,
     CategoryModule,
     StudentModule,
+    ConfigModule.forRoot({ isGlobal: true }),
   ],
-  controllers: [AppController, UserController, ProductController],
-  providers: [AppService, ProductService],
+
+  controllers: [
+    AppController,
+    UserController,
+    ProductController,
+    ExceptionController,
+    DatabaseController,
+    EvController,
+  ],
+
+  providers: [AppService, ProductService, DatabaseService, EvService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
